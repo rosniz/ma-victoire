@@ -1,0 +1,159 @@
+<!-- journal.html -->
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Mon Journal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-gray-800">
+        <i class="fas fa-book text-primary"></i> Mon Journal Personnel
+    </h1>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nouvelleEntreeModal">
+        <i class="fas fa-pen"></i> Nouvelle entrée
+    </button>
+</div>
+
+<!-- Statistiques du journal -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-left-info">
+            <div class="card-body">
+                <div class="text-center">
+                    <i class="fas fa-book fa-2x text-info mb-2"></i>
+                    <h5>Entrées totales</h5>
+                    <h3>{{ entries.count }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-left-success">
+            <div class="card-body">
+                <div class="text-center">
+                    <i class="fas fa-calendar fa-2x text-success mb-2"></i>
+                    <h5>Ce mois</h5>
+                    <h3>{{ entries|length }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-left-warning">
+            <div class="card-body">
+                <div class="text-center">
+                    <i class="fas fa-smile fa-2x text-warning mb-2"></i>
+                    <h5>Humeur moyenne</h5>
+                    <h3>😊</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Entrées du journal -->
+<div class="row">
+    <div class="col-12">
+        {% for entry in entries %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 class="card-title mb-1">
+                            {% if entry.titre %}
+                                {{ entry.titre }}
+                            {% else %}
+                                Journal du {{ entry.date_creation|date:"d F Y" }}
+                            {% endif %}
+                        </h5>
+                        <small class="text-muted">
+                            <i class="fas fa-calendar"></i> {{ entry.date_creation|date:"l d F Y à H:i" }}
+                        </small>
+                    </div>
+                    {% if entry.humeur_jour %}
+                    <div>
+                        {% for humeur, label in entry.HUMEURS %}
+                            {% if humeur == entry.humeur_jour %}
+                                <span class="badge bg-light text-dark fs-6">{{ label }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="journal-content">
+                    {{ entry.contenu|linebreaks }}
+                </div>
+                
+                {% if entry.image %}
+                <div class="mt-3">
+                    <img src="{{ entry.image.url }}" alt="Image du journal" class="img-fluid rounded" style="max-height: 300px;">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-book-open fa-4x text-muted mb-4"></i>
+                <h4>Votre journal est vide</h4>
+                <p class="text-muted">Commencez à écrire vos pensées, vos progrès et vos réflexions.</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nouvelleEntreeModal">
+                    <i class="fas fa-pen"></i> Écrire ma première entrée
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal Nouvelle entrée -->
+<div class="modal fade" id="nouvelleEntreeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">✍️ Nouvelle entrée de journal</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="titre" class="form-label">Titre (optionnel)</label>
+                        <input type="text" class="form-control" name="titre" placeholder="Donnez un titre à votre entrée...">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="contenu" class="form-label">Votre message</label>
+                        <textarea class="form-control" name="contenu" rows="8" required
+                                  placeholder="Que s'est-il passé aujourd'hui ? Comment vous sentez-vous ? Quels sont vos progrès ?"></textarea>
+                        <small class="form-text text-muted">Exprimez-vous librement. Ce journal est votre espace personnel.</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="humeur_jour" class="form-label">Votre humeur du jour</label>
+                        <select class="form-select" name="humeur_jour">
+                            <option value="">Choisir...</option>
+                            {% for value, label in form.humeur_jour.field.choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="image" class="form-label">Ajouter une image (optionnel)</label>
+                        <input type="file" class="form-control" name="image" accept="image/*">
+                        <small class="form-text text-muted">Vous pouvez ajouter une photo pour illustrer votre journée.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Publier l'entrée
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,152 @@
+<!-- objectifs.html -->
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Mes Objectifs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-gray-800">
+        <i class="fas fa-target text-primary"></i> Mes Objectifs
+    </h1>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nouvelObjectifModal">
+        <i class="fas fa-plus"></i> Nouvel Objectif
+    </button>
+</div>
+
+<!-- Statistiques -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-left-info">
+            <div class="card-body">
+                <div class="text-center">
+                    <h5 class="text-info">📈 Total</h5>
+                    <h3>{{ objectifs.count }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-left-success">
+            <div class="card-body">
+                <div class="text-center">
+                    <h5 class="text-success">✅ Validés</h5>
+                    <h3>{{ objectifs|length|add:0 }}{% for obj in objectifs %}{% if obj.est_valide %}{% endif %}{% endfor %}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-left-warning">
+            <div class="card-body">
+                <div class="text-center">
+                    <h5 class="text-warning">⏳ En cours</h5>
+                    <h3>{{ objectifs|length|add:0 }}{% for obj in objectifs %}{% if not obj.est_valide %}{% endif %}{% endfor %}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-left-primary">
+            <div class="card-body">
+                <div class="text-center">
+                    <h5 class="text-primary">📊 Progression</h5>
+                    <h3>75%</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Liste des objectifs par catégorie -->
+<div class="row">
+    {% for categorie, categorie_display in objectifs.0.CATEGORIES %}
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-{{ categorie }} text-white">
+                <h6 class="m-0 font-weight-bold">{{ categorie_display }}</h6>
+            </div>
+            <div class="card-body">
+                {% for objectif in objectifs %}
+                    {% if objectif.categorie == categorie %}
+                    <div class="objective-item {% if objectif.est_valide %}objective-completed{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="form-check me-3">
+                                        <input type="checkbox" class="form-check-input" 
+                                               {% if objectif.est_valide %}checked{% endif %}
+                                               onchange="toggleObjectif({{ objectif.id }})">
+                                    </div>
+                                    <h6 class="mb-0 {% if objectif.est_valide %}text-success{% endif %}">
+                                        {{ objectif.titre }}
+                                    </h6>
+                                </div>
+                                {% if objectif.description %}
+                                <p class="mb-2 text-muted small">{{ objectif.description }}</p>
+                                {% endif %}
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        Créé le {{ objectif.date_creation|date:"d/m/Y" }}
+                                    </small>
+                                    {% if objectif.est_valide %}
+                                    <small class="text-success">
+                                        <i class="fas fa-check"></i> 
+                                        Validé le {{ objectif.date_validation|date:"d/m/Y" }}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% empty %}
+                    {% if forloop.first %}
+                    <p class="text-muted text-center">Aucun objectif dans cette catégorie</p>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal Nouvel Objectif -->
+<div class="modal fade" id="nouvelObjectifModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">📝 Nouvel Objectif</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {{ form|crispy }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Créer l'objectif</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleObjectif(objectifId) {
+    fetch(`/objectifs/${objectifId}/valider/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    }).then(response => {
+        if (response.ok) {
+            location.reload();
+        }
+    });
+}
+</script>
+{% endblock %}

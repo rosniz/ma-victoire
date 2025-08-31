@@ -1,0 +1,193 @@
+<!-- suivi_hebdomadaire.html -->
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Suivi Hebdomadaire{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="h3 mb-4 text-gray-800">
+            <i class="fas fa-chart-line text-primary"></i> Mon Suivi Hebdomadaire
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Formulaire de suivi -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    📅 Semaine du {{ suivi_actuel.semaine|date:"d/m/Y" }}
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Humeur -->
+                    <div class="mb-4">
+                        <label class="form-label"><strong>😊 Comment vous sentez-vous cette semaine ?</strong></label>
+                        <div class="row text-center">
+                            {% for value, label in form.humeur.field.choices %}
+                            <div class="col">
+                                <input type="radio" class="btn-check" name="humeur" value="{{ value }}" 
+                                       id="humeur{{ value }}" {% if form.humeur.value == value %}checked{% endif %}>
+                                <label class="btn btn-outline-primary w-100 mood-emoji" for="humeur{{ value }}">
+                                    {{ label }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Motivation -->
+                    <div class="mb-4">
+                        <label class="form-label"><strong>💪 Quel est votre niveau de motivation ?</strong></label>
+                        <div class="row text-center">
+                            {% for value, label in form.motivation.field.choices %}
+                            <div class="col">
+                                <input type="radio" class="btn-check" name="motivation" value="{{ value }}" 
+                                       id="motivation{{ value }}" {% if form.motivation.value == value %}checked{% endif %}>
+                                <label class="btn btn-outline-success w-100 mood-emoji" for="motivation{{ value }}">
+                                    {{ label }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Participation aux activités -->
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="participation_activites" 
+                                   id="participation" {% if form.participation_activites.value %}checked{% endif %}>
+                            <label class="form-check-label" for="participation">
+                                <strong>🏃‍♂️ J'ai participé activement aux activités cette semaine</strong>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Niveau de douleur -->
+                    <div class="mb-4">
+                        <label class="form-label" for="douleur"><strong>⚡ Niveau de douleur (0-10)</strong></label>
+                        <input type="range" class="form-range" name="douleur_niveau" min="0" max="10" 
+                               value="{{ form.douleur_niveau.value|default:0 }}" id="douleur" 
+                               oninput="document.getElementById('douleurValue').textContent = this.value">
+                        <div class="text-center">
+                            <span class="badge bg-warning" id="douleurValue">{{ form.douleur_niveau.value|default:0 }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Commentaire -->
+                    <div class="mb-4">
+                        <label class="form-label" for="commentaire"><strong>💭 Commentaires libres</strong></label>
+                        <textarea class="form-control" name="commentaire" rows="4" 
+                                  placeholder="Comment s'est passée votre semaine ? Partagez vos réussites, difficultés ou observations...">{{ form.commentaire.value|default:"" }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-success btn-lg w-100">
+                        <i class="fas fa-save"></i> Enregistrer mon suivi
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historique et graphiques -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">📈 Évolution</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="evolutionChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">📋 Historique récent</h6>
+            </div>
+            <div class="card-body">
+                {% for suivi in historique %}
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>{{ suivi.semaine|date:"d/m" }}</strong>
+                        <div>
+                            {% for humeur, label in suivi.HUMEURS %}
+                                {% if humeur == suivi.humeur %}{{ label|slice:":2" }}{% endif %}
+                            {% endfor %}
+                            {% for motiv, label in suivi.MOTIVATIONS %}
+                                {% if motiv == suivi.motivation %}{{ label|slice:":2" }}{% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% if suivi.commentaire %}
+                    <small class="text-muted">{{ suivi.commentaire|truncatewords:10 }}</small>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <p class="text-muted text-center">Aucun historique disponible</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+    const ctx = document.getElementById('evolutionChart').getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [
+                {% for suivi in historique reversed %}
+                    '{{ suivi.semaine|date:"d/m" }}'{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Humeur',
+                data: [
+                    {% for suivi in historique reversed %}
+                        {{ suivi.humeur }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '#36b9cc',
+                backgroundColor: 'rgba(54, 185, 204, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Motivation',
+                data: [
+                    {% for suivi in historique reversed %}
+                        {{ suivi.motivation }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '#1cc88a',
+                backgroundColor: 'rgba(28, 200, 138, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 5,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

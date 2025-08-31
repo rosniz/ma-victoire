@@ -1,0 +1,327 @@
+<!-- dashboard_patient.html -->
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Tableau de bord - Patient{% endblock %}
+{% load mathfilters %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-tachometer-alt text-primary"></i>
+                Bonjour {{ user.first_name|default:user.username }} ! 👋
+            </h1>
+            <div class="text-muted">
+                <i class="fas fa-calendar"></i> 
+                {{ "now"|date:"l d F Y" }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Citation motivante -->
+{% if citation %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-left-warning">
+            <div class="card-body">
+                <div class="text-center">
+                    <h5 class="card-title">💡 Citation du jour</h5>
+                    <blockquote class="blockquote">
+                        <p class="mb-0">"{{ citation.texte }}"</p>
+                        {% if citation.auteur %}
+                        <footer class="blockquote-footer mt-2">{{ citation.auteur }}</footer>
+                        {% endif %}
+                    </blockquote>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Statistiques rapides -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Objectifs Validés</div>
+                        <div class="h5 mb-0 font-weight-bold">{{ objectifs_valides }}/{{ objectifs_total }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-target fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Progression</div>
+                        <div class="row no-gutters align-items-center">
+                            <div class="col-auto">
+                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
+                                    {% if objectifs_total > 0 %}
+                                        {{ objectifs_valides|floatformat:0 }}%
+                                    {% else %}
+                                        0%
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="progress progress-sm mr-2">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: {% if objectifs_total > 0 %}{{ objectifs_valides|mul:100|div:objectifs_total }}{% else %}0{% endif %}%">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-chart-line fa-2x text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Entrées Journal</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ journal_entries.count }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-book fa-2x text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Suivi Actuel</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {% if suivi_recent %}
+                                {% for humeur, label in suivi_recent.0.HUMEURS %}
+                                    {% if humeur == suivi_recent.0.humeur %}{{ label }}{% endif %}
+                                {% endfor %}
+                            {% else %}
+                                À compléter
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-smile fa-2x text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Objectifs récents -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold">🎯 Mes Objectifs</h6>
+                <a href="{% url 'objectifs' %}" class="btn btn-sm btn-primary">Voir tous</a>
+            </div>
+            <div class="card-body">
+                {% for objectif in objectifs|slice:":5" %}
+                <div class="objective-item {% if objectif.est_valide %}objective-completed{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">
+                                {% if objectif.est_valide %}✅{% else %}⏳{% endif %}
+                                {{ objectif.titre }}
+                            </h6>
+                            <p class="mb-1 text-muted small">{{ objectif.get_categorie_display }}</p>
+                            {% if objectif.description %}
+                            <p class="mb-0 text-muted small">{{ objectif.description|truncatewords:15 }}</p>
+                            {% endif %}
+                        </div>
+                        <span class="badge bg-{{ objectif.categorie }}">
+                            {{ objectif.get_categorie_display|slice:":2" }}
+                        </span>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center">
+                    <i class="fas fa-plus-circle fa-3x mb-3"></i><br>
+                    Aucun objectif défini.<br>
+                    <a href="{% url 'objectifs' %}" class="btn btn-primary btn-sm mt-2">Créer mon premier objectif</a>
+                </p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Journal récent -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold">📖 Mon Journal</h6>
+                <a href="{% url 'journal' %}" class="btn btn-sm btn-primary">Voir tout</a>
+            </div>
+            <div class="card-body">
+                {% for entry in journal_entries %}
+                <div class="journal-entry">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h6 class="mb-0">{{ entry.titre|default:"Sans titre" }}</h6>
+                        <small class="text-muted">{{ entry.date_creation|date:"d/m" }}</small>
+                    </div>
+                    <p class="mb-0 small">{{ entry.contenu|truncatewords:20 }}</p>
+                    {% if entry.humeur_jour %}
+                    <div class="mt-2">
+                        {% for humeur, label in entry.HUMEURS %}
+                            {% if humeur == entry.humeur_jour %}
+                                <span class="badge bg-light text-dark">{{ label }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <p class="text-muted text-center">
+                    <i class="fas fa-pen fa-3x mb-3"></i><br>
+                    Aucune entrée dans votre journal.<br>
+                    <a href="{% url 'journal' %}" class="btn btn-primary btn-sm mt-2">Commencer à écrire</a>
+                </p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Suivi des dernières semaines -->
+{% if suivi_recent %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold">📊 Évolution Récente</h6>
+                <a href="{% url 'suivi_hebdomadaire' %}" class="btn btn-sm btn-primary">Compléter le suivi</a>
+            </div>
+            <div class="card-body">
+                <canvas id="suiviChart" width="400" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Actions rapides -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold">⚡ Actions Rapides</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <a href="{% url 'objectifs' %}" class="btn btn-outline-primary btn-lg w-100 mb-3">
+                            <i class="fas fa-target fa-2x d-block mb-2"></i>
+                            Mes Objectifs
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'suivi_hebdomadaire' %}" class="btn btn-outline-success btn-lg w-100 mb-3">
+                            <i class="fas fa-chart-line fa-2x d-block mb-2"></i>
+                            Mon Suivi
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'journal' %}" class="btn btn-outline-info btn-lg w-100 mb-3">
+                            <i class="fas fa-book fa-2x d-block mb-2"></i>
+                            Mon Journal
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'profil' %}" class="btn btn-outline-warning btn-lg w-100 mb-3">
+                            <i class="fas fa-user fa-2x d-block mb-2"></i>
+                            Mon Profil
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if suivi_recent %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+    const ctx = document.getElementById('suiviChart').getContext('2d');
+    const suiviChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [
+                {% for suivi in suivi_recent reversed %}
+                    '{{ suivi.semaine|date:"d/m" }}'{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Humeur',
+                data: [
+                    {% for suivi in suivi_recent reversed %}
+                        {{ suivi.humeur }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Motivation',
+                data: [
+                    {% for suivi in suivi_recent reversed %}
+                        {{ suivi.motivation }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 5,
+                    ticks: {
+                        callback: function(value) {
+                            const labels = ['', '😢', '😟', '😐', '🙂', '😊'];
+                            return labels[value] || value;
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,207 @@
+<!-- profil_patient.html -->
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Profil Patient{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-4">
+        <!-- Profil utilisateur -->
+        <div class="card">
+            <div class="card-body text-center">
+                {% if patient.photo %}
+                    <img src="{{ patient.photo.url }}" alt="Photo de profil" class="rounded-circle mb-3" width="150" height="150">
+                {% else %}
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 150px; height: 150px; font-size: 3rem;">
+                        {{ patient.user.first_name|first }}{{ patient.user.last_name|first }}
+                    </div>
+                {% endif %}
+                
+                <h4>{{ patient.user.first_name }} {{ patient.user.last_name }}</h4>
+                <p class="text-muted">{{ patient.get_user_type_display }}</p>
+                
+                <div class="row text-center mt-4">
+                    <div class="col">
+                        <h6 class="text-muted">Date d'entrée</h6>
+                        <p>{{ patient.date_entree|date:"d/m/Y"|default:"Non renseignée" }}</p>
+                    </div>
+                </div>
+                
+                {% if patient.infirmier_referent %}
+                <div class="mt-3">
+                    <h6 class="text-muted">Infirmier référent</h6>
+                    <p>{{ patient.infirmier_referent.user.first_name }} {{ patient.infirmier_referent.user.last_name }}</p>
+                </div>
+                {% endif %}
+                
+                {% if patient.objectif_principal %}
+                <div class="mt-3">
+                    <h6 class="text-muted">Objectif principal</h6>
+                    <p class="small">{{ patient.objectif_principal }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Statistiques rapides -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold">📊 Statistiques</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ objectifs.count }}</h4>
+                        <small class="text-muted">Objectifs</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ objectifs|length }}</h4>
+                        <small class="text-muted">Validés</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <!-- Navigation par onglets -->
+        <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="objectifs-tab" data-bs-toggle="pill" data-bs-target="#objectifs" type="button">
+                    🎯 Objectifs
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="commentaires-tab" data-bs-toggle="pill" data-bs-target="#commentaires" type="button">
+                    💬 Commentaires
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="suivi-tab" data-bs-toggle="pill" data-bs-target="#suivi" type="button">
+                    📈 Suivi
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="pills-tabContent">
+            <!-- Onglet Objectifs -->
+            <div class="tab-pane fade show active" id="objectifs">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold">Objectifs par catégorie</h6>
+                    </div>
+                    <div class="card-body">
+                        {% for categorie, categorie_display in objectifs.0.CATEGORIES %}
+                        <h6 class="mt-3 mb-2">{{ categorie_display }}</h6>
+                        {% for objectif in objectifs %}
+                            {% if objectif.categorie == categorie %}
+                            <div class="objective-item {% if objectif.est_valide %}objective-completed{% endif %}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            {% if objectif.est_valide %}✅{% else %}⏳{% endif %}
+                                            {{ objectif.titre }}
+                                        </h6>
+                                        {% if objectif.description %}
+                                        <p class="mb-1 text-muted small">{{ objectif.description }}</p>
+                                        {% endif %}
+                                        <small class="text-muted">
+                                            Créé le {{ objectif.date_creation|date:"d/m/Y" }}
+                                            {% if objectif.est_valide %}
+                                                - Validé le {{ objectif.date_validation|date:"d/m/Y" }}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                        {% empty %}
+                        <p class="text-muted">Aucun objectif défini pour le moment.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onglet Commentaires -->
+            <div class="tab-pane fade" id="commentaires">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="m-0 font-weight-bold">Commentaires de l'équipe</h6>
+                        {% if user.userprofile.user_type != 'patient' %}
+                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#commentaireModal">
+                            <i class="fas fa-plus"></i> Ajouter
+                        </button>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        {% for commentaire in commentaires %}
+                        <div class="border-bottom pb-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <strong>{{ commentaire.soignant.user.first_name }} {{ commentaire.soignant.user.last_name }}</strong>
+                                <div>
+                                    <small class="text-muted">{{ commentaire.date_creation|date:"d/m/Y H:i" }}</small>
+                                    {% if commentaire.prive %}
+                                    <span class="badge bg-warning ms-2">Privé</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <p class="mb-0">{{ commentaire.contenu|linebreaks }}</p>
+                            <small class="text-muted">{{ commentaire.soignant.get_user_type_display }}</small>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted text-center">Aucun commentaire pour le moment.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Onglet Suivi -->
+            <div class="tab-pane fade" id="suivi">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold">Évolution récente</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted text-center">Graphiques et données de suivi à venir...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Commentaire (pour les soignants) -->
+{% if user.userprofile.user_type != 'patient' %}
+<div class="modal fade" id="commentaireModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'ajouter_commentaire' patient.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">💬 Nouveau commentaire</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="contenu" class="form-label">Commentaire</label>
+                        <textarea class="form-control" name="contenu" rows="4" required></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="prive" id="prive">
+                        <label class="form-check-label" for="prive">
+                            Commentaire privé (visible seulement par l'équipe soignante)
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Ajouter le commentaire</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

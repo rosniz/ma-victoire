@@ -1,0 +1,114 @@
+<!-- dashboard_soignant.html -->
+{% extends 'base.html' %}
+
+{% block title %}Tableau de bord - Soignant{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="h3 mb-4 text-gray-800">
+            <i class="fas fa-user-md text-primary"></i>
+            Espace Soignant - {{ user.userprofile.get_user_type_display }}
+        </h1>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-primary">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Patients Suivis</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ nb_patients }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users fa-2x text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">👥 Liste des Patients</h6>
+            </div>
+            <div class="card-body">
+                {% if patients %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Date d'entrée</th>
+                                <th>Infirmier référent</th>
+                                <th>Objectif principal</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for patient in patients %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if patient.photo %}
+                                            <img src="{{ patient.photo.url }}" alt="Photo" class="rounded-circle me-2" width="40" height="40">
+                                        {% else %}
+                                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;">
+                                                {{ patient.user.first_name|first }}{{ patient.user.last_name|first }}
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <strong>{{ patient.user.first_name }} {{ patient.user.last_name }}</strong><br>
+                                            <small class="text-muted">{{ patient.user.username }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if patient.date_entree %}
+                                        {{ patient.date_entree|date:"d/m/Y" }}
+                                    {% else %}
+                                        <span class="text-muted">Non renseignée</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if patient.infirmier_referent %}
+                                        {{ patient.infirmier_referent.user.first_name }} {{ patient.infirmier_referent.user.last_name }}
+                                    {% else %}
+                                        <span class="text-muted">Non assigné</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if patient.objectif_principal %}
+                                        {{ patient.objectif_principal|truncatewords:10 }}
+                                    {% else %}
+                                        <span class="text-muted">Non défini</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'profil_patient' patient.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> Voir
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5>Aucun patient assigné</h5>
+                    <p class="text-muted">Les patients vous seront assignés par l'administration.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
